@@ -1,54 +1,23 @@
-from fastapi import FastAPI, Depends, HTTPException
-from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
-from pydantic import BaseModel
-from sqlalchemy import create_engine, Column, Integer, String
+from fastapi import FastAPI, HTTPException, Depends
+from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, Session
-from passlib.context import CryptContext
-import jwt
-import datetime
-from fastapi.middleware.cors import CORSMiddleware
+from backend import models, schemas  # 绝对导入
+from contextlib import asynccontextmanager
+from pydantic import BaseModel
 
-app = FastAPI()
+# 数据库连接和会话配置
+SQLALCHEMY_DATABASE_URL = "sqlite:///./test.db"
 
-# CORS 设置
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-# 数据库连接
-SQLALCHEMY_DATABASE_URL = "mysql+pymysql://root:021104@localhost:3306/deepseek_clone"
-engine = create_engine(SQLALCHEMY_DATABASE_URL)
+# 创建数据库引擎
+engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False})
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
-# 密码加密
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-
-# JWT 配置
-SECRET_KEY = "your-secret-key"
-ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 30
-
+# 创建基础类
 Base = declarative_base()
 
-
-# 用户表模型
-class User(Base):
-    __tablename__ = "users"
-    id = Column(Integer, primary_key=True, index=True)
-    username = Column(String, unique=True, index=True)
-    password = Column(String)
-    email = Column(String, unique=True)
-
-
-Base.metadata.create_all(bind=engine)
-
-
-# 获取数据库会话
+# 依赖：获取数据库会话
 def get_db():
     db = SessionLocal()
     try:
@@ -56,122 +25,61 @@ def get_db():
     finally:
         db.close()
 
-
-# 获取当前用户
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/token")
-
-
-def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
-    credentials_exception = HTTPException(
-        status_code=401,
-        detail="Could not validate credentials",
-        headers={"WWW-Authenticate": "Bearer"},
-    )
-    try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        username: str = payload.get("sub")
-        if username is None:
-            raise credentials_exception
-        user = db.query(User).filter(User.username == username).first()
-        if user is None:
-            raise credentials_exception
-        return user
-    except jwt.PyJWTError:
-        raise credentials_exception
-
-
-# Pydantic 数据模型
-class UserCreate(BaseModel):
+# 定义登录请求的 Pydantic 模式（如果没有在 schemas 中定义，可以在这里定义）
+class LoginRequest(BaseModel):
     username: str
     password: str
-    email: str
 
+# 使用 lifespan 事件处理器代替 on_event
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # 启动时创建所有表（如果不存在）
+    Base.metadata.create_all(bind=engine)
+    yield
+    # 关闭时执行的代码（如有需要）
+    pass
 
-class UserUpdate(BaseModel):
-    username: str
-    email: str
-    password: str | None = None
+# 设置 FastAPI 应用实例
+app = FastAPI(lifespan=lifespan)
 
+# 设置 CORS 中间件，以允许跨域请求
+origins = [
+    "http://localhost:8080",  # 前端地址
+]
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,  # 允许的源
+    allow_credentials=True,
+    allow_methods=["*"],  # 允许所有方法
+    allow_headers=["*"],  # 允许所有头
+)
 
-class Token(BaseModel):
-    access_token: str
-    token_type: str
-
-
-class UserResponse(BaseModel):
-    id: int
-    username: str
-    email: str
-
-    class Config:
-        from_attributes = True  # ✅ 修正了 Pydantic 2.0 的语法
-
-
-# 注册用户
-@app.post("/users/", response_model=UserResponse)
-def create_user(user: UserCreate, db: Session = Depends(get_db)):
-    db_user = db.query(User).filter(User.username == user.username).first()
-    if db_user:
+# 用户注册接口
+@app.post("/register")
+async def register(user: schemas.UserCreate, db: Session = Depends(get_db)):
+    # 检查用户名是否已存在
+    existing_user = db.query(models.User).filter(models.User.username == user.username).first()
+    if existing_user:
         raise HTTPException(status_code=400, detail="Username already registered")
-    db_email = db.query(User).filter(User.email == user.email).first()
-    if db_email:
-        raise HTTPException(status_code=400, detail="Email already registered")
 
-    hashed_password = pwd_context.hash(user.password)
-    new_user = User(username=user.username, password=hashed_password, email=user.email)
+    # 创建并保存新用户
+    new_user = models.User(username=user.username, password=user.password)
     db.add(new_user)
     db.commit()
     db.refresh(new_user)
     return new_user
 
+# 用户登录接口
+@app.post("/login")
+async def login(request: LoginRequest, db: Session = Depends(get_db)):
+    # 根据用户名查询用户
+    user = db.query(models.User).filter(models.User.username == request.username).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
 
-# 登录并返回 JWT Token
-@app.post("/token", response_model=Token)
-def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
-    user = db.query(User).filter(User.username == form_data.username).first()
-    if not user or not pwd_context.verify(form_data.password, user.password):
-        raise HTTPException(status_code=401, detail="Invalid username or password")
+    # 检查密码（这里为简单示例，实际项目中建议使用加密）
+    if user.password != request.password:
+        raise HTTPException(status_code=400, detail="Incorrect username or password")
 
-    access_token_expires = datetime.timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    access_token = jwt.encode(
-        {"sub": user.username, "exp": datetime.datetime.utcnow() + access_token_expires},
-        SECRET_KEY,
-        algorithm=ALGORITHM,
-    )
-    return {"access_token": access_token, "token_type": "bearer"}
-
-
-# 获取用户资料
-@app.get("/profile", response_model=UserResponse)
-def get_user_profile(current_user: User = Depends(get_current_user)):
-    return current_user
-
-
-# 更新用户资料
-@app.put("/profile", response_model=UserResponse)
-def update_user_profile(user_update: UserUpdate, current_user: User = Depends(get_current_user),
-                        db: Session = Depends(get_db)):
-    # 检查用户名和电子邮件是否已经存在
-    db_user = db.query(User).filter(User.username == user_update.username).first()
-    if db_user and db_user.id != current_user.id:
-        raise HTTPException(status_code=400, detail="Username already taken")
-
-    db_email = db.query(User).filter(User.email == user_update.email).first()
-    if db_email and db_email.id != current_user.id:
-        raise HTTPException(status_code=400, detail="Email already taken")
-
-    # 如果提供了新的密码，则需要更新密码
-    if user_update.password:
-        hashed_password = pwd_context.hash(user_update.password)
-        current_user.password = hashed_password
-
-    current_user.username = user_update.username
-    current_user.email = user_update.email
-    db.commit()
-    db.refresh(current_user)
-    return current_user
-
-
-@app.get("/")
-def read_root():
-    return {"message": "Welcome to the DeepSeek Clone API"}
+    # 登录成功后返回一个示例 token（后续可集成 JWT 等机制）
+    return {"success": True, "token": "dummy-token"}

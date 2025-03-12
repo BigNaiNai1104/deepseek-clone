@@ -34,6 +34,8 @@
 </template>
 
 <script>
+import axios from 'axios';
+
 export default {
   data() {
     return {
@@ -52,107 +54,30 @@ export default {
         this.errorMessage = '用户名和密码不能为空';
         return;
       }
-      
-      // 假设这里是登录逻辑
-      const loginSuccess = this.username === 'admin' && this.password === '123456'; // 模拟登录验证
-      if (loginSuccess) {
-        // 存储 token 信息
-        localStorage.setItem('access_token', 'your-token-here');
-        
-        // 跳转到个人资料页面
-        this.$router.push({ name: 'profile' });
-      } else {
-        this.errorMessage = '用户名或密码错误';
+
+      try {
+        const response = await axios.post('http://localhost:9000/login', {
+          username: this.username,
+          password: this.password,
+        });
+
+        console.log("后端响应:", response);  // 输出响应内容
+
+        if (response.data.token) {
+          localStorage.setItem('access_token', response.data.token);
+          this.$router.push({ name: 'profile' });
+        } else {
+          this.errorMessage = '登录失败，请稍后再试';
+        }
+      } catch (error) {
+        console.error("请求失败:", error);  // 输出错误信息
+        if (error.response && error.response.data) {
+          this.errorMessage = error.response.data.detail || '用户名或密码错误';
+        } else {
+          this.errorMessage = '登录失败，请稍后再试';
+        }
       }
     },
   },
 };
 </script>
-
-<style scoped>
-.login-container {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 100vh;
-  background-color: #f0f8ff; /* 背景色为浅蓝色 */
-}
-
-.login-box {
-  background-color: white;
-  padding: 40px;
-  border-radius: 10px;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-  width: 300px;
-}
-
-h2 {
-  text-align: center;
-  color: #1e3a8a; /* 深蓝色 */
-  margin-bottom: 20px;
-}
-
-.input-group {
-  margin-bottom: 15px;
-}
-
-label {
-  display: block;
-  font-size: 14px;
-  color: #1e3a8a; /* 深蓝色 */
-  margin-bottom: 5px;
-}
-
-input {
-  width: 100%;
-  padding: 10px;
-  border: 1px solid #ccc;
-  border-radius: 5px;
-  font-size: 16px;
-}
-
-input:focus {
-  outline: none;
-  border-color: #1e3a8a; /* 聚焦时边框变为深蓝色 */
-}
-
-button {
-  width: 100%;
-  padding: 12px;
-  background-color: #1e3a8a; /* 深蓝色按钮 */
-  color: white;
-  border: none;
-  border-radius: 5px;
-  font-size: 16px;
-  cursor: pointer;
-  transition: background-color 0.3s;
-}
-
-button:hover {
-  background-color: #2563eb; /* 浅蓝色 hover 效果 */
-}
-
-.error-message {
-  color: red;
-  text-align: center;
-  margin-top: 10px;
-}
-
-.register-link {
-  text-align: center;
-  margin-top: 20px;
-}
-
-.register-link p {
-  font-size: 14px;
-}
-
-.register-link a {
-  color: #1e3a8a;
-  text-decoration: none;
-}
-
-.register-link a:hover {
-  text-decoration: underline;
-}
-</style>
