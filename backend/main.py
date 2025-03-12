@@ -104,7 +104,7 @@ class UserResponse(BaseModel):
     email: str
 
     class Config:
-        orm_mode = True
+        from_attributes = True  # ✅ 修正了 Pydantic 2.0 的语法
 
 
 # 注册用户

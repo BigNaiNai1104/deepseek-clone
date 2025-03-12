@@ -2,6 +2,7 @@
     <div class="chat-container">
       <!-- 左侧导航栏 -->
       <div class="sidebar">
+        <img src="@/assets/history-icon.png" alt="历史记录" class="history-icon" @click="toggleHistory" />
         <img src="@/assets/logout-icon.png" alt="退出" class="logout-icon" @click="logout" />
       </div>
   
@@ -33,6 +34,7 @@
     setup() {
       const messages = ref([]);
       const newMessage = ref("");
+      const showHistory = ref(false);
       const router = useRouter();
   
       const sendMessage = () => {
@@ -47,11 +49,18 @@
         router.push("/login");
       };
   
+      const toggleHistory = () => {
+        showHistory.value = !showHistory.value;
+        console.log("历史记录打开状态:", showHistory.value);
+      };
+  
       return {
         messages,
         newMessage,
         sendMessage,
         logout,
+        toggleHistory,
+        showHistory,
       };
     },
   };
@@ -69,12 +78,15 @@
     width: 80px;
     background-color: #fff;
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
     border-right: 1px solid #ddd;
+    padding-top: 20px;
+    gap: 15px;
   }
   
-  .logout-icon {
+  .history-icon, .logout-icon {
     width: 40px;
     height: 40px;
     cursor: pointer;
