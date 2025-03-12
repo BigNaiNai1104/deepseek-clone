@@ -1,28 +1,20 @@
 <template>
-  <div>
-    <nav>
-      <router-link to="/">Home</router-link>
-      <router-link v-if="!isAuthenticated" to="/login">Login</router-link>
-      <router-link v-if="isAuthenticated" to="/dashboard">Dashboard</router-link>
-      <button v-if="isAuthenticated" @click="logoutUser">Logout</button>
-    </nav>
-    <router-view />
+  <div id="app">
+    <router-view></router-view> <!-- 渲染 Vue Router 组件 -->
   </div>
 </template>
 
 <script>
-import { mapGetters, mapActions } from "vuex";
-
 export default {
-  computed: {
-    ...mapGetters(["isAuthenticated", "getUser"]),
-  },
-  methods: {
-    ...mapActions(["logout"]),
-    logoutUser() {
-      this.logout();
-      this.$router.push("/login");
-    },
-  },
+  name: "App",
 };
 </script>
+
+<style>
+body {
+  font-family: Arial, sans-serif;
+  margin: 0;
+  padding: 0;
+  background-color: #f4f4f4;
+}
+</style>

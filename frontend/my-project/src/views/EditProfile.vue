@@ -16,50 +16,42 @@
   </template>
   
   <script>
-  import axios from 'axios';
+  import axios from "axios";
   
   export default {
     data() {
       return {
-        username: '',
-        email: '',
+        username: "",
+        email: "",
       };
     },
     created() {
       this.getUserProfile();
     },
     methods: {
-      // 获取用户资料
       async getUserProfile() {
         try {
-          const token = localStorage.getItem('access_token');
-          const response = await axios.get('http://localhost:8000/profile', {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
+          const token = localStorage.getItem("access_token");
+          const response = await axios.get("http://localhost:8000/profile", {
+            headers: { Authorization: `Bearer ${token}` },
           });
           this.username = response.data.username;
           this.email = response.data.email;
         } catch (error) {
-          console.error('Error fetching profile:', error);
+          console.error("Error fetching profile:", error);
         }
       },
-      // 保存编辑后的资料
       async saveProfile() {
         try {
-          const token = localStorage.getItem('access_token');
-          const response = await axios.put(
-            'http://localhost:8000/profile',
+          const token = localStorage.getItem("access_token");
+          await axios.put(
+            "http://localhost:8000/profile",
             { username: this.username, email: this.email },
-            {
-              headers: {
-                Authorization: `Bearer ${token}`,
-              },
-            }
+            { headers: { Authorization: `Bearer ${token}` } }
           );
-          this.$router.push({ name: 'profile' });  // 提交成功后返回用户资料页面
+          this.$router.push({ name: "profile" });
         } catch (error) {
-          console.error('Error saving profile:', error);
+          console.error("Error saving profile:", error);
         }
       },
     },

@@ -1,124 +1,35 @@
 <template>
-  <div class="login-container">
+  <div>
     <form @submit.prevent="login">
-      <h2>Login</h2>
-      <div class="input-group">
-        <input 
-          type="text" 
-          v-model="username" 
-          placeholder="Username" 
-          required 
-          class="input-field"
-        />
-      </div>
-      <div class="input-group">
-        <input 
-          type="password" 
-          v-model="password" 
-          placeholder="Password" 
-          required 
-          class="input-field"
-        />
-      </div>
-      <button type="submit" class="btn">Login</button>
-      <p class="error-message" v-if="loginError">Invalid username or password</p>
+      <input v-model="username" placeholder="用户名" />
+      <input v-model="password" type="password" placeholder="密码" />
+      <button type="submit">登录</button>
     </form>
   </div>
 </template>
 
 <script>
-import axios from 'axios';
-
 export default {
   data() {
     return {
       username: '',
       password: '',
-      loginError: false,
     };
   },
   methods: {
     async login() {
-      this.loginError = false;
-      try {
-        // 使用 URLSearchParams 发送表单数据
-        const response = await axios.post('http://localhost:8000/token', 
-          new URLSearchParams({
-            username: this.username,
-            password: this.password,
-          }), 
-          {
-            headers: {
-              'Content-Type': 'application/x-www-form-urlencoded', // 明确指定请求头
-            },
-          }
-        );
-
-        const { access_token } = response.data;
-        localStorage.setItem('access_token', access_token);  // 存储token
-        this.$router.push({ name: 'home' });  // 登录成功后跳转到主页
-      } catch (error) {
-        this.loginError = true;
-        console.error('Login failed:', error.response ? error.response.data : error);
+      // 假设这里是登录逻辑
+      const loginSuccess = true; // 模拟登录成功
+      if (loginSuccess) {
+        // 存储 token 信息
+        localStorage.setItem('access_token', 'your-token-here');
+        
+        // 跳转到聊天页面
+        this.$router.push({ name: 'chat' });
+      } else {
+        alert('登录失败');
       }
     },
   },
 };
 </script>
-
-<style scoped>
-.login-container {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  min-height: 100vh;
-  background-color: #f7f7f7;
-}
-
-form {
-  background-color: white;
-  padding: 20px;
-  border-radius: 8px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  width: 300px;
-}
-
-h2 {
-  text-align: center;
-  margin-bottom: 20px;
-}
-
-.input-group {
-  margin-bottom: 15px;
-}
-
-.input-field {
-  width: 100%;
-  padding: 10px;
-  font-size: 16px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-}
-
-.btn {
-  width: 100%;
-  padding: 10px;
-  font-size: 16px;
-  background-color: #4CAF50;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-}
-
-.btn:hover {
-  background-color: #45a049;
-}
-
-.error-message {
-  color: red;
-  text-align: center;
-  font-size: 14px;
-  margin-top: 10px;
-}
-</style>

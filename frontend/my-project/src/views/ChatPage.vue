@@ -1,91 +1,58 @@
 <template>
     <div class="chat-container">
-      <!-- 头部导航栏 -->
-      <header class="header">
-        <div class="logo">DeepSeek</div>
-        <div class="tagline">Your AI Assistant</div>
-        <div class="user-settings">
-          <img src="user-icon.png" alt="User Icon" class="user-icon" />
-        </div>
-      </header>
+      <!-- 左侧导航栏 -->
+      <div class="sidebar">
+        <img src="@/assets/logout-icon.png" alt="退出" class="logout-icon" @click="logout" />
+      </div>
   
-      <!-- 主体内容区 -->
-      <main class="main-content">
-        <div class="chat-history">
-          <div v-for="(message, index) in messages" :key="index" :class="['message', message.type]">
-            <div class="message-bubble" :class="message.type + '-bubble'">
-              <markdown>{{ message.text }}</markdown>
-            </div>
-            <div class="actions" v-if="message.type === 'ai'">
-              <button @click="copyToClipboard(message.text)">复制</button>
-              <button @click="sendFeedback">反馈</button>
-            </div>
+      <!-- 聊天主界面 -->
+      <div class="chat-main">
+        <h1 class="chat-title">我是 DeepSeek，很高兴见到你！</h1>
+        <p class="chat-subtitle">我可以帮你写代码、读文件、写作各种创意内容，清晰你的任务交给我吧~</p>
+        
+        <div class="chat-box">
+          <div v-for="(message, index) in messages" :key="index" class="message">
+            <strong>{{ message.user }}:</strong> {{ message.text }}
           </div>
         </div>
-      </main>
   
-      <!-- 底部输入区 -->
-      <footer class="footer">
-        <textarea v-model="message" placeholder="输入消息..." rows="3"></textarea>
-        <div class="footer-actions">
-          <button @click="attachFile">附件</button>
-          <button @click="viewHistory">历史</button>
+        <!-- 输入框区域 -->
+        <div class="input-area">
+          <input v-model="newMessage" placeholder="输入消息..." @keyup.enter="sendMessage" />
           <button @click="sendMessage">发送</button>
         </div>
-        <div class="model-version">模型版本：GPT-4</div>
-      </footer>
+      </div>
     </div>
   </template>
   
   <script>
-  import markdownIt from 'markdown-it';
+  import { ref } from "vue";
+  import { useRouter } from "vue-router";
   
   export default {
-    data() {
-      return {
-        message: '',
-        messages: [],
-      };
-    },
-    methods: {
-      copyToClipboard(text) {
-        navigator.clipboard.writeText(text);
-      },
-      sendFeedback() {
-        console.log('反馈发送成功！');
-      },
-      attachFile() {
-        console.log('附件功能');
-      },
-      viewHistory() {
-        console.log('查看历史');
-      },
-      sendMessage() {
-        if (this.message.trim()) {
-          // 将用户消息添加到消息列表
-          this.messages.push({ type: 'user', text: this.message });
-          this.message = '';
+    setup() {
+      const messages = ref([]);
+      const newMessage = ref("");
+      const router = useRouter();
   
-          // 模拟 AI 回复
-          setTimeout(() => {
-            this.messages.push({ type: 'ai', text: 'AI 回复：' + this.message });
-          }, 1000);
+      const sendMessage = () => {
+        if (newMessage.value.trim() !== "") {
+          messages.value.push({ user: "Me", text: newMessage.value });
+          newMessage.value = "";
         }
-      },
-    },
-    components: {
-      markdown: {
-        functional: true,
-        render(h, context) {
-          const md = markdownIt();
-          const renderedMarkdown = md.render(context.children[0]);
-          return h('div', {
-            domProps: {
-              innerHTML: renderedMarkdown,
-            },
-          });
-        },
-      },
+      };
+  
+      const logout = () => {
+        localStorage.removeItem("token");
+        router.push("/login");
+      };
+  
+      return {
+        messages,
+        newMessage,
+        sendMessage,
+        logout,
+      };
     },
   };
   </script>
@@ -93,113 +60,77 @@
   <style scoped>
   .chat-container {
     display: flex;
-    flex-direction: column;
     height: 100vh;
-    font-family: Arial, sans-serif;
+    background-color: #f8f9fa;
   }
   
-  /* 头部导航栏 */
-  .header {
+  /* 左侧导航栏样式 */
+  .sidebar {
+    width: 80px;
+    background-color: #fff;
     display: flex;
-    justify-content: space-between;
     align-items: center;
-    background-color: #4CAF50;
-    color: white;
-    padding: 10px 20px;
+    justify-content: center;
+    border-right: 1px solid #ddd;
   }
   
-  .logo {
-    font-size: 1.5rem;
-    font-weight: bold;
-  }
-  
-  .tagline {
-    font-size: 1rem;
-    font-style: italic;
-  }
-  
-  .user-settings .user-icon {
+  .logout-icon {
     width: 40px;
     height: 40px;
-    border-radius: 50%;
+    cursor: pointer;
   }
   
-  /* 主体内容区 */
-  .main-content {
+  .chat-main {
     flex: 1;
-    padding: 20px;
-    overflow-y: auto;
-    background-color: #f4f4f4;
-  }
-  
-  .chat-history {
     display: flex;
     flex-direction: column;
+    padding: 20px;
+    text-align: center;
+  }
+  
+  .chat-title {
+    font-size: 24px;
+    font-weight: bold;
+    margin-bottom: 5px;
+  }
+  
+  .chat-subtitle {
+    font-size: 16px;
+    color: #666;
+    margin-bottom: 20px;
+  }
+  
+  .chat-box {
+    flex: 1;
+    border: 1px solid #ccc;
+    padding: 10px;
+    background-color: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    overflow-y: auto;
+    min-height: 300px;
+    margin-bottom: 15px;
+  }
+  
+  .input-area {
+    display: flex;
     gap: 10px;
   }
   
-  .message-bubble {
-    max-width: 60%;
+  input {
+    flex: 1;
     padding: 10px;
-    border-radius: 10px;
-    font-size: 1rem;
-  }
-  
-  .user-bubble {
-    background-color: #42b983;
-    color: white;
-    align-self: flex-end;
-  }
-  
-  .ai-bubble {
-    background-color: #f2f2f2;
-    color: black;
-    align-self: flex-start;
-  }
-  
-  .actions button {
-    margin-top: 5px;
-    padding: 5px;
-    font-size: 0.8rem;
-    background-color: #42b983;
-    color: white;
-    border-radius: 5px;
-  }
-  
-  /* 底部输入区 */
-  .footer {
-    background-color: #fff;
-    padding: 20px;
-    border-top: 1px solid #ddd;
-  }
-  
-  textarea {
-    width: 100%;
-    padding: 10px;
-    font-size: 1rem;
-    border-radius: 10px;
+    border-radius: 4px;
     border: 1px solid #ccc;
   }
   
-  .footer-actions button {
-    padding: 10px 20px;
-    margin-right: 10px;
-    background-color: #4CAF50;
+  button {
+    padding: 10px 15px;
+    background-color: #007bff;
     color: white;
     border: none;
     border-radius: 4px;
     cursor: pointer;
-  }
-  
-  .footer-actions button:hover {
-    background-color: #45a049;
-  }
-  
-  .model-version {
-    font-size: 0.8rem;
-    color: #888;
-    margin-top: 10px;
-    text-align: center;
   }
   </style>
   
