@@ -1,16 +1,27 @@
 <template>
-  <div>
-    <h1>Login Page</h1>
+  <div class="login-container">
     <form @submit.prevent="login">
-      <div>
-        <label for="username">Username:</label>
-        <input type="text" id="username" v-model="username" placeholder="Enter your username" required />
+      <h2>Login</h2>
+      <div class="input-group">
+        <input 
+          type="text" 
+          v-model="username" 
+          placeholder="Username" 
+          required 
+          class="input-field"
+        />
       </div>
-      <div>
-        <label for="password">Password:</label>
-        <input type="password" id="password" v-model="password" placeholder="Enter your password" required />
+      <div class="input-group">
+        <input 
+          type="password" 
+          v-model="password" 
+          placeholder="Password" 
+          required 
+          class="input-field"
+        />
       </div>
-      <button type="submit">Login</button>
+      <button type="submit" class="btn">Login</button>
+      <p class="error-message" v-if="loginError">Invalid username or password</p>
     </form>
   </div>
 </template>
@@ -19,68 +30,86 @@
 import axios from 'axios';
 
 export default {
-  name: "LoginPage",
   data() {
     return {
-      username: "",
-      password: ""
+      username: '',
+      password: '',
+      loginError: false,
     };
   },
   methods: {
     async login() {
+      this.loginError = false;
       try {
-        // 使用 URLSearchParams 构造表单数据
-        const params = new URLSearchParams();
-        params.append('username', this.username);
-        params.append('password', this.password);
-
-        const response = await axios.post("http://localhost:8000/token", params, {
-          headers: {
-            'Content-Type': 'application/x-www-form-urlencoded'
-          }
+        const response = await axios.post('http://localhost:8000/token', {
+          username: this.username,
+          password: this.password,
         });
-        localStorage.setItem("access_token", response.data.access_token);
-        alert("Login successful!");
-        this.$router.push("/");  // 登录成功后跳转到首页
+        const { access_token } = response.data;
+        localStorage.setItem('access_token', access_token);
+        this.$router.push({ name: 'home' });
       } catch (error) {
-        console.error(error);
-        const errorMessage = error.response && error.response.data
-          ? error.response.data.detail || "Unknown error"
-          : "Login failed: Unknown error";
-        alert(errorMessage);
+        this.loginError = true;
+        console.error('Login failed:', error);
       }
-    }
-  }
+    },
+  },
 };
 </script>
 
 <style scoped>
-h1 {
-  color: #42b983;
+.login-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  background-color: #f7f7f7;
 }
 
 form {
-  max-width: 400px;
-  margin: 0 auto;
+  background-color: white;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  width: 300px;
 }
 
-label {
-  display: block;
-  margin-top: 10px;
+h2 {
+  text-align: center;
+  margin-bottom: 20px;
 }
 
-input {
+.input-group {
+  margin-bottom: 15px;
+}
+
+.input-field {
   width: 100%;
-  padding: 8px;
-  margin-top: 5px;
+  padding: 10px;
+  font-size: 16px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
 }
 
-button {
-  margin-top: 20px;
-  padding: 10px 20px;
-  background-color: #42b983;
+.btn {
+  width: 100%;
+  padding: 10px;
+  font-size: 16px;
+  background-color: #4CAF50;
   color: white;
   border: none;
+  border-radius: 4px;
   cursor: pointer;
+}
+
+.btn:hover {
+  background-color: #45a049;
+}
+
+.error-message {
+  color: red;
+  text-align: center;
+  font-size: 14px;
+  margin-top: 10px;
 }
 </style>

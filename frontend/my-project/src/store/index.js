@@ -3,7 +3,7 @@ import { createStore } from "vuex";
 const store = createStore({
   state() {
     return {
-      user: null // 用来存储用户登录信息
+      user: JSON.parse(localStorage.getItem("user")) || null // 如果本地有用户数据就直接加载
     };
   },
   mutations: {
@@ -12,12 +12,14 @@ const store = createStore({
     },
     logout(state) {
       state.user = null;
+      localStorage.removeItem("access_token"); // 清除本地存储的token
+      localStorage.removeItem("user"); // 清除用户数据
     }
   },
   actions: {
     login({ commit }, user) {
-      // 这里可以添加实际的登录逻辑，比如请求后端接口
       commit("setUser", user);
+      localStorage.setItem("user", JSON.stringify(user)); // 存储用户数据
     },
     logout({ commit }) {
       commit("logout");
