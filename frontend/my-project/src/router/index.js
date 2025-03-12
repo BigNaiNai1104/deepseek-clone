@@ -1,19 +1,22 @@
 import { createRouter, createWebHistory } from 'vue-router';
-import Home from '../views/HomePageAlternative.vue';
-import UserProfile from '../views/UserProfile.vue';
-import LoginPage from '../views/LoginPage.vue'; // 引入 LoginPage
-import EditProfile from '../views/EditProfile.vue'; // 引入 EditProfile 组件
+
+// 懒加载方式引入组件
+const HomePage = () => import('../views/HomePage.vue');
+const LoginPage = () => import('../views/LoginPage.vue');
+const UserProfile = () => import('../views/UserProfile.vue');
+const ChatPage = () => import('../views/ChatPage.vue');
 
 const routes = [
   {
     path: '/',
     name: 'home',
-    component: Home,
+    component: HomePage,
   },
   {
     path: '/profile',
     name: 'profile',
     component: UserProfile,
+    meta: { requiresAuth: true },
   },
   {
     path: '/login',
@@ -21,15 +24,25 @@ const routes = [
     component: LoginPage,
   },
   {
-    path: '/edit-profile', // 新的路由路径
-    name: 'edit-profile',  // 路由的名称
-    component: EditProfile, // 绑定到 EditProfile 组件
+    path: '/chat',
+    name: 'chat',
+    component: ChatPage,
+    meta: { requiresAuth: true },
   },
 ];
 
 const router = createRouter({
   history: createWebHistory(process.env.BASE_URL),
   routes,
+});
+
+// 导航守卫：保护需要认证的路由
+router.beforeEach((to, from, next) => {
+  if (to.meta.requiresAuth && !localStorage.getItem('access_token')) {
+    next({ name: 'login' });
+  } else {
+    next();
+  }
 });
 
 export default router;

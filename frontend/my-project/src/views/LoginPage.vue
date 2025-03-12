@@ -41,16 +41,25 @@ export default {
     async login() {
       this.loginError = false;
       try {
-        const response = await axios.post('http://localhost:8000/token', {
-          username: this.username,
-          password: this.password,
-        });
+        // 使用 URLSearchParams 发送表单数据
+        const response = await axios.post('http://localhost:8000/token', 
+          new URLSearchParams({
+            username: this.username,
+            password: this.password,
+          }), 
+          {
+            headers: {
+              'Content-Type': 'application/x-www-form-urlencoded', // 明确指定请求头
+            },
+          }
+        );
+
         const { access_token } = response.data;
-        localStorage.setItem('access_token', access_token);
-        this.$router.push({ name: 'home' });
+        localStorage.setItem('access_token', access_token);  // 存储token
+        this.$router.push({ name: 'home' });  // 登录成功后跳转到主页
       } catch (error) {
         this.loginError = true;
-        console.error('Login failed:', error);
+        console.error('Login failed:', error.response ? error.response.data : error);
       }
     },
   },

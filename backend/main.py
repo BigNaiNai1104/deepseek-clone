@@ -35,6 +35,7 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
 Base = declarative_base()
 
+
 # 用户表模型
 class User(Base):
     __tablename__ = "users"
@@ -43,7 +44,9 @@ class User(Base):
     password = Column(String)
     email = Column(String, unique=True)
 
+
 Base.metadata.create_all(bind=engine)
+
 
 # 获取数据库会话
 def get_db():
@@ -53,8 +56,11 @@ def get_db():
     finally:
         db.close()
 
+
 # 获取当前用户
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/token")
+
+
 def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
     credentials_exception = HTTPException(
         status_code=401,
@@ -73,15 +79,24 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
     except jwt.PyJWTError:
         raise credentials_exception
 
+
 # Pydantic 数据模型
 class UserCreate(BaseModel):
     username: str
     password: str
     email: str
 
+
+class UserUpdate(BaseModel):
+    username: str
+    email: str
+    password: str | None = None
+
+
 class Token(BaseModel):
     access_token: str
     token_type: str
+
 
 class UserResponse(BaseModel):
     id: int
@@ -90,6 +105,7 @@ class UserResponse(BaseModel):
 
     class Config:
         orm_mode = True
+
 
 # 注册用户
 @app.post("/users/", response_model=UserResponse)
@@ -108,6 +124,7 @@ def create_user(user: UserCreate, db: Session = Depends(get_db)):
     db.refresh(new_user)
     return new_user
 
+
 # 登录并返回 JWT Token
 @app.post("/token", response_model=Token)
 def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
@@ -123,10 +140,37 @@ def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db:
     )
     return {"access_token": access_token, "token_type": "bearer"}
 
+
 # 获取用户资料
 @app.get("/profile", response_model=UserResponse)
 def get_user_profile(current_user: User = Depends(get_current_user)):
     return current_user
+
+
+# 更新用户资料
+@app.put("/profile", response_model=UserResponse)
+def update_user_profile(user_update: UserUpdate, current_user: User = Depends(get_current_user),
+                        db: Session = Depends(get_db)):
+    # 检查用户名和电子邮件是否已经存在
+    db_user = db.query(User).filter(User.username == user_update.username).first()
+    if db_user and db_user.id != current_user.id:
+        raise HTTPException(status_code=400, detail="Username already taken")
+
+    db_email = db.query(User).filter(User.email == user_update.email).first()
+    if db_email and db_email.id != current_user.id:
+        raise HTTPException(status_code=400, detail="Email already taken")
+
+    # 如果提供了新的密码，则需要更新密码
+    if user_update.password:
+        hashed_password = pwd_context.hash(user_update.password)
+        current_user.password = hashed_password
+
+    current_user.username = user_update.username
+    current_user.email = user_update.email
+    db.commit()
+    db.refresh(current_user)
+    return current_user
+
 
 @app.get("/")
 def read_root():
