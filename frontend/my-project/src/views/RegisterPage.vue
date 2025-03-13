@@ -73,7 +73,7 @@ export default {
       }
 
       try {
-        const response = await axios.post('http://localhost:9000/register', {
+        const response = await axios.post('http://localhost:8000/register', {
           username: this.username,
           password: this.password,
         });

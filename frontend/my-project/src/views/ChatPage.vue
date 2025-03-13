@@ -22,7 +22,7 @@
       const newMessage = ref("");  // 输入框中的新消息
   
       // 建立 WebSocket 连接
-      socket.value = new WebSocket("ws://192.168.0.103:9000/ws");  // 修改为后端的 WebSocket 地址
+      socket.value = new WebSocket("ws://192.168.0.103:8000/ws");  // 修改为后端的 WebSocket 地址
   
       // 接收到的消息处理
       socket.value.onmessage = (event) => {
